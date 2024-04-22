@@ -6,10 +6,7 @@ const fs = require("fs")
 
 copyDist("static", "dist")
 copyDist("node_modules/@excalidraw/excalidraw/dist/excalidraw-assets", "dist/excalidraw-assets")
-copyDist(
-  "node_modules/@excalidraw/excalidraw/dist/excalidraw-assets-dev",
-  "dist/excalidraw-assets-dev"
-)
+copyDist("node_modules/@excalidraw/excalidraw/dist/excalidraw-assets-dev", "dist/excalidraw-assets-dev")
 
 require("esbuild")
   .build({
