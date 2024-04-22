@@ -13,15 +13,25 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from pylti1p3.contrib.django.lti1p3_tool_config.models import LtiTool
 
-from draw.utils import (JSONType, bytes_to_data_uri, compression_ratio, dump_content, load_content, make_room_name,
-                        pick, uncompressed_json_size, user_id_for_room, validate_room_name)
+from draw.utils import (
+    JSONType,
+    bytes_to_data_uri,
+    compression_ratio,
+    dump_content,
+    load_content,
+    make_room_name,
+    pick,
+    uncompressed_json_size,
+    user_id_for_room,
+    validate_room_name,
+)
 from ltiapi.models import CustomUser
 from ltiapi.utils import get_legacy_user_room_name
 
 from .types import ALLOWED_IMAGE_MIME_TYPES, ExcalidrawBinaryFile
 
-TPseudonym = TypeVar('TPseudonym', bound='Pseudonym')
-TRoom = TypeVar('TRoom', bound='ExcalidrawRoom')
+TPseudonym = TypeVar("TPseudonym", bound="Pseudonym")
+TRoom = TypeVar("TRoom", bound="ExcalidrawRoom")
 
 
 class ExcalidrawLogRecordManager(models.Manager):
@@ -29,9 +39,9 @@ class ExcalidrawLogRecordManager(models.Manager):
         return self.get_queryset().filter(user_pseudonym=pseudonym.user_pseudonym)
 
     def records_for_user_in_room(self, user: CustomUser, room: TRoom):
-        return self.get_queryset().filter(user_pseudonym=models.Subquery(
-            Pseudonym.objects.filter(user=user, room=room).values('user_pseudonym')[:1]
-        ))
+        return self.get_queryset().filter(
+            user_pseudonym=models.Subquery(Pseudonym.objects.filter(user=user, room=room).values("user_pseudonym")[:1])
+        )
 
 
 class ExcalidrawLogRecord(models.Model):
@@ -42,6 +52,7 @@ class ExcalidrawLogRecord(models.Model):
     if the content has been compressed. The decompression does not have to take place manually. Use
     the properties of this model therefore.
     """
+
     # dates are sorted after field size. this reduces table size in postgres.
     _compressed = models.BooleanField(editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -49,8 +60,11 @@ class ExcalidrawLogRecord(models.Model):
     event_type = models.CharField(max_length=50)
     # if a user is deleted, keep the foreign key to be able to keep the action log
     user_pseudonym = models.CharField(
-        max_length=64, validators=[MinLengthValidator(64)], null=True,
-        help_text=_("this is generated from draw.utils.user_id_for_room"))
+        max_length=64,
+        validators=[MinLengthValidator(64)],
+        null=True,
+        help_text=_("this is generated from draw.utils.user_id_for_room"),
+    )
     _content = models.BinaryField(blank=True)
 
     objects = ExcalidrawLogRecordManager()
@@ -89,18 +103,19 @@ class ExcalidrawLogRecord(models.Model):
     def user(self, user: CustomUser):
         self.user_pseudonym = user_id_for_room(user.pk, self.room_name) if user else None
 
+
 # trust me
-EMPTY_JSON_LIST_ZLIB_COMPRESSED = b'x\x9c\x8b\x8e\x05\x00\x01\x15\x00\xb9'
+EMPTY_JSON_LIST_ZLIB_COMPRESSED = b"x\x9c\x8b\x8e\x05\x00\x01\x15\x00\xb9"
+
 
 class ExcalidrawRoom(models.Model):
     """
     Contains the latest ``ExcalidrawElement`` s of a room.
     """
+
     created_at = models.DateTimeField(auto_now_add=True)
     last_update = models.DateTimeField(auto_now=True)
-    room_name = models.CharField(
-        primary_key=True, max_length=24,
-        validators=[validate_room_name])
+    room_name = models.CharField(primary_key=True, max_length=24, validators=[validate_room_name])
     room_created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     room_consumer = models.ForeignKey(LtiTool, on_delete=models.SET_NULL, null=True, blank=True)
     room_course_id = models.CharField(max_length=255, null=True, blank=True)
@@ -154,7 +169,7 @@ class ExcalidrawRoom(models.Model):
         # make visible that this room was cloned
         record = ExcalidrawLogRecord(room_name=self.room_name, event_type="cloned")
         record.user = room_created_by
-        record.content = {'clonedFrom': old_name}
+        record.content = {"clonedFrom": old_name}
         record.save()
 
         # insert the room as a new log record. the replay
@@ -174,14 +189,18 @@ class Pseudonym(models.Model):
     Delete all records in this table to restore anonymity. No
     record will be available for users who joined anonymously.
     """
+
     room = models.ForeignKey(ExcalidrawRoom, on_delete=models.CASCADE, verbose_name=_("room name"))
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, verbose_name=_("user"))
     user_pseudonym = models.CharField(
-        primary_key=True, max_length=64, validators=[MinLengthValidator(64)],
-        help_text=_("this is generated from draw.utils.user_id_for_room"))
+        primary_key=True,
+        max_length=64,
+        validators=[MinLengthValidator(64)],
+        help_text=_("this is generated from draw.utils.user_id_for_room"),
+    )
 
     class Meta:
-        unique_together = [('room', 'user')]
+        unique_together = [("room", "user")]
 
     @classmethod
     def create_for_user_in_room(cls, user: CustomUser, room: ExcalidrawRoom):
@@ -207,31 +226,30 @@ class ExcalidrawFile(models.Model):
 
     Orphaned files can be deleted from the admin view.
     """
+
     belongs_to = models.ForeignKey(
-        ExcalidrawRoom, on_delete=models.SET_NULL, null=True,
-        related_name="files", verbose_name=_("belongs to room"))
+        ExcalidrawRoom, on_delete=models.SET_NULL, null=True, related_name="files", verbose_name=_("belongs to room")
+    )
     # we don't use the hash that's submitted by excalidraw as the pk
     # because it is a sha1 hash and sha1 is broken. for filtering, this
     # should therefore only be used on the relation manager of belongs_to.
     element_file_id = models.CharField(max_length=40)
     # file content will be stored as file, not to db
-    content = models.FileField(upload_to='excalidraw-uploads')
+    content = models.FileField(upload_to="excalidraw-uploads")
     # this will not be compressed, as the file meta data is always relatively small in size.
     meta = models.JSONField(verbose_name=_("excalidraw meta data"))
 
-    ALLOWED_META_KEYS = {'created', 'mimeType'}
+    ALLOWED_META_KEYS = {"created", "mimeType"}
 
     class Meta:
-        unique_together = [('belongs_to', 'element_file_id')]
+        unique_together = [("belongs_to", "element_file_id")]
 
     @classmethod
     def from_excalidraw_file_schema(cls, room_name: str, file_data: ExcalidrawBinaryFile):
         mime_from_data_uri, _ = mimetypes.guess_type(file_data.dataURL)
         if mime_from_data_uri not in ALLOWED_IMAGE_MIME_TYPES:
-            raise ValidationError({
-                "content": _("The content MIME type of %s is not allowed") % (mime_from_data_uri,)
-            })
-        file_data.mimeType = mime_from_data_uri # consider data from the client as being unsafe
+            raise ValidationError({"content": _("The content MIME type of %s is not allowed") % (mime_from_data_uri,)})
+        file_data.mimeType = mime_from_data_uri  # consider data from the client as being unsafe
         with urlopen(file_data.dataURL) as response:
             content_bytes = response.read()
         file_hash = sha256(content_bytes)
@@ -241,15 +259,17 @@ class ExcalidrawFile(models.Model):
             belongs_to_id=room_name,
             content=ContentFile(content_bytes, name=file_name),
             element_file_id=file_data.id,
-            meta=pick(file_data.dict(), cls.ALLOWED_META_KEYS))
+            meta=pick(file_data.dict(), cls.ALLOWED_META_KEYS),
+        )
         return self
 
     def to_excalidraw_file_schema(self) -> ExcalidrawBinaryFile:
         return ExcalidrawBinaryFile(
             **self.meta,
             id=self.element_file_id,
-            dataURL=bytes_to_data_uri(self.content.read(), self.meta['mimeType']),
-            filePath=self.content.url)
+            dataURL=bytes_to_data_uri(self.content.read(), self.meta["mimeType"]),
+            filePath=self.content.url,
+        )
 
     def __repr__(self) -> str:
         return f"<ExcalidrawFile {self.element_file_id} for room {self.belongs_to_id}>"
@@ -257,27 +277,21 @@ class ExcalidrawFile(models.Model):
 
 class CourseToRoomMapperManager(models.Manager):
     def create_from_room_name(
-        self, *, lti_data_room: str, course_id: str,
-        mode: str, user: CustomUser,  lti_tool: LtiTool
+        self, *, lti_data_room: str, course_id: str, mode: str, user: CustomUser, lti_tool: LtiTool
     ) -> models.Model:
         """
         Create or clone a room if necessary, returning a mapper to it.
         """
         Modes = self.model.BoardMode
 
-        room = ExcalidrawRoom.objects\
-            .filter(room_name=lti_data_room)\
-            .first()
+        room = ExcalidrawRoom.objects.filter(room_name=lti_data_room).first()
 
         if room and room.room_course_id == course_id:
             # the room is opened from the course it was created in
             new_room = room
         elif room:
             # the room exists but is openend from a cloned course
-            new_room = room.clone(
-                room_course_id=course_id,
-                room_created_by=user,
-                room_consumer=lti_tool)
+            new_room = room.clone(room_course_id=course_id, room_created_by=user, room_consumer=lti_tool)
         else:
             # the room was not created yet. the course might
             # have been cloned but it does not matter here.
@@ -287,22 +301,26 @@ class CourseToRoomMapperManager(models.Manager):
                 room_created_by=user,
                 room_consumer=lti_tool,
                 room_course_id=course_id,
-                tracking_enabled=settings.ENABLE_TRACKING_BY_DEFAULT_FOR_LTI)
+                tracking_enabled=settings.ENABLE_TRACKING_BY_DEFAULT_FOR_LTI,
+            )
             new_room.save()
 
         redirect = self.model(
-            room=new_room, lti_data_room=lti_data_room, course_id=course_id, mode=mode,
-            user=user if mode in [Modes.STUDENT, Modes.STUDENT_LEGACY] else None)
+            room=new_room,
+            lti_data_room=lti_data_room,
+            course_id=course_id,
+            mode=mode,
+            user=user if mode in [Modes.STUDENT, Modes.STUDENT_LEGACY] else None,
+        )
         redirect.clean()
         redirect.save()
 
         return redirect
 
     def get_or_create_for_course(
-        self, *, lti_data_room: str, course_id: str,
-        mode: str, user: CustomUser, lti_tool: LtiTool
+        self, *, lti_data_room: str, course_id: str, mode: str, user: CustomUser, lti_tool: LtiTool
     ) -> tuple[models.Model, bool]:
-        """ Creates a redirect and clones a corresponding room if neccessary. """
+        """Creates a redirect and clones a corresponding room if neccessary."""
         Modes = self.model.BoardMode
 
         try:
@@ -323,8 +341,12 @@ class CourseToRoomMapperManager(models.Manager):
         # legacy single does not have to be implemented here as it would have been created above
         # for Modes.STUDENT_LEGACY, lti_data_room is still the full legacy room name
         redirect = self.create_from_room_name(
-            lti_data_room=lti_data_room, course_id=course_id,
-            mode=mode, user=user, lti_tool=lti_tool)
+            lti_data_room=lti_data_room,
+            course_id=course_id,
+            mode=mode,
+            user=user,
+            lti_tool=lti_tool,
+        )
 
         return redirect, True
 
@@ -347,19 +369,20 @@ class CourseToRoomMapper(models.Model):
         mode single:
             (lti prefix, course id, user) -> room name
     """
+
     class BoardMode(models.TextChoices):
-        CLASSROOM      = "classroom", _("Classroom Assignment")
-        GROUPWORK      = "group",     _("Group Assignment")
-        STUDENT        = "single_v2", _("Single Student")
-        STUDENT_LEGACY = "single",    _("Single Student Assignment (legacy)")
+        CLASSROOM = "classroom", _("Classroom Assignment")
+        GROUPWORK = "group", _("Group Assignment")
+        STUDENT = "single_v2", _("Single Student")
+        STUDENT_LEGACY = "single", _("Single Student Assignment (legacy)")
 
     room = models.OneToOneField(
-        ExcalidrawRoom, primary_key=True, related_name="course",
-        on_delete=models.CASCADE, verbose_name=_("room name"))
+        ExcalidrawRoom, primary_key=True, related_name="course", on_delete=models.CASCADE, verbose_name=_("room name")
+    )
     lti_data_room = models.CharField(max_length=24, validators=[validate_room_name])
     mode = models.CharField(
-        max_length=12, verbose_name=_("board mode"),
-        choices=BoardMode.choices, default=BoardMode.CLASSROOM)
+        max_length=12, verbose_name=_("board mode"), choices=BoardMode.choices, default=BoardMode.CLASSROOM
+    )
     course_id = models.CharField(max_length=255, null=True, blank=True)
     user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, blank=True, null=True, verbose_name=_("user"))
 
@@ -370,6 +393,8 @@ class CourseToRoomMapper(models.Model):
 
     def clean(self):
         if self.user and self.mode not in [self.BoardMode.STUDENT, self.BoardMode.STUDENT_LEGACY]:
-            raise ValidationError({
-                "user": _("The user can only be set if the mode is set to “single student”"),
-            })
+            raise ValidationError(
+                {
+                    "user": _("The user can only be set if the mode is set to “single student”"),
+                }
+            )

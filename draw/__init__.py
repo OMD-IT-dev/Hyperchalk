@@ -1,1 +1,5 @@
-__version__ = '1.2.2'
+from toml import load
+
+projectdata = load("pyproject.toml")
+
+__version__ = projectdata["project"]["version"]

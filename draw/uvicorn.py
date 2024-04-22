@@ -8,5 +8,5 @@ class UvicornWorker(BaseUvicornWorker):
         "loop": "uvloop",
         "http": "httptools",
         "lifespan": "off",
-        "root_path": environ.get("SCRIPT_NAME", "")
+        "root_path": environ.get("SCRIPT_NAME", ""),
     }

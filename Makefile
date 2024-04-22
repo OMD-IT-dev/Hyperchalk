@@ -7,8 +7,8 @@ MAKEFLAGS += --no-builtin-rules
 
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-# retrieve the software version from the draw/__init__.py file
-HC_VERSION := $(shell grep -hE "^__version__ =" draw/__init__.py | grep -ohE '(\d\.?)+')
+# retrieve the software version from the pyproject.toml file
+HC_VERSION := $(shell grep -hE "^version = " pyproject.toml | grep -ohE '(\d\.?)+')
 
 # TODO: compile messages in the Dockerfile
 latest:

@@ -25,7 +25,7 @@ class Unauthorized(PermissionDenied):
 
 
 def create_json_response_forbidden(e: PermissionDenied):
-    return JsonResponse({'detail': str(e)}, status=403)
+    return JsonResponse({"detail": str(e)}, status=403)
 
 
 def create_html_response_forbidden(e: PermissionDenied):
@@ -39,8 +39,7 @@ def user_is_staff(user: User):
 
 async def staff_access_check(request: HttpRequest, *args, **kwargs):
     if not await user_is_staff(request.user):
-        raise PermissionDenied(
-            _("You need to be logged in as staff or as admin."))
+        raise PermissionDenied(_("You need to be logged in as staff or as admin."))
 
 
 def require_staff_user(json=False):
@@ -56,7 +55,6 @@ def require_staff_user(json=False):
     create_response = create_json_response_forbidden if json else create_html_response_forbidden
 
     def decorator(async_func: Callable[..., HttpResponse]):
-
         @wraps(async_func)
         async def inner(request: HttpRequest, *args, **kwargs):
             try:
@@ -84,15 +82,18 @@ def user_is_authorized(user: User, room: Room, session: SessionBase) -> bool:
     # token from the LMS. the deep linking message launch then sets it on the session for internal
     # usage. this has the advantage that the users courses don't have to be saved to the database
     # if the session middleware is cookie based.
-    allowed_course_ids = session.get('course_ids', [])
+    allowed_course_ids = session.get("course_ids", [])
 
     # is_authenticated is needed because AnonymousUser don't has the attrs below.
     return user.is_authenticated and (
         (user.is_staff and user.has_perm("collab.view_excalidrawroom"))
         or user.is_superuser
         or room.room_consumer_id is None
-        or (user.registered_via_id == room.room_consumer_id
-            and (room.room_course_id is None or room.room_course_id in allowed_course_ids)))
+        or (
+            user.registered_via_id == room.room_consumer_id
+            and (room.room_course_id is None or room.room_course_id in allowed_course_ids)
+        )
+    )
 
 
 def require_login(async_func: Callable[..., HttpResponse]):
@@ -111,4 +112,4 @@ def require_login(async_func: Callable[..., HttpResponse]):
 
 @require_staff_user()
 async def user_is_staff_view(request):
-    return HttpResponse('', status=200)
+    return HttpResponse("", status=200)

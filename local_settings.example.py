@@ -7,7 +7,9 @@ The settings are explained in https://docs.djangoproject.com/en/3.2/topics/setti
 
 You should also have a look at https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 """
+
 # pylint: disable=wildcard-import,unused-wildcard-import
+# ruff: noqa: F405,F403 # ignore star import errors
 from draw.settings import *
 from draw.utils import deepmerge
 
@@ -57,7 +59,7 @@ SERVE_FILES = False
 
 # TODO: add your host name(s) here!
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # When you register an LTI consumer, you can call the command './manage.py makeconsumerlink'.
 # This command will display a URL to you that can be used to automatically configure this app
@@ -159,22 +161,25 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 #
 # TODO: if you need some custom logging, you can configre it here.
 
-LOGGING = deepmerge(LOGGING, {
-    'handlers': {
-        'draw_logging': {
-            'level': 'WARNING',
-            # 'filters': ['require_debug_true'],
-            'class': 'logging.StreamHandler',
-            'formatter': 'django.server',
-        }
-    },
-    'loggers': {
-        'draw': {
-            'level': 'WARNING',
-            'handlers': ['draw_logging'],
+LOGGING = deepmerge(
+    LOGGING,
+    {
+        "handlers": {
+            "draw_logging": {
+                "level": "WARNING",
+                # 'filters': ['require_debug_true'],
+                "class": "logging.StreamHandler",
+                "formatter": "django.server",
+            }
         },
-    }
-})
+        "loggers": {
+            "draw": {
+                "level": "WARNING",
+                "handlers": ["draw_logging"],
+            },
+        },
+    },
+)
 
 # Email
 # https://docs.djangoproject.com/en/3.2/ref/settings/#email-backend
@@ -208,7 +213,7 @@ LOGGING = deepmerge(LOGGING, {
 #
 # TODO: configure your time zone.
 
-TIME_ZONE = 'CET'
+TIME_ZONE = "CET"
 
 # NOTE: IMPORTANT. DO NOT REMOVE.
 finalize_settings(locals())

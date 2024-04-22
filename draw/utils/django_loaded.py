@@ -9,8 +9,7 @@ from django.conf import settings
 
 
 def build_absolute_uri_without_request(
-    url: str, query: str = '', host: str = settings.LINK_BASE,
-    protocol: Optional[str] = 'https'
+    url: str, query: str = "", host: str = settings.LINK_BASE, protocol: Optional[str] = "https"
 ):
     """
     Gives the absolute URI of a resource after reversing.
@@ -29,7 +28,7 @@ def build_absolute_uri_without_request(
     return urlunsplit((protocol, host, url, query, None))
 
 
-websocket_logger = logging.getLogger('draw.websocket')
+websocket_logger = logging.getLogger("draw.websocket")
 
 
 class LoggingAsyncJsonWebsocketConsumer(AsyncJsonWebsocketConsumer):
@@ -39,6 +38,7 @@ class LoggingAsyncJsonWebsocketConsumer(AsyncJsonWebsocketConsumer):
 
     You can configure the log by changing the logger config for `draw.websocket`
     """
+
     allowed_eventtypes: Set[str] = set()
 
     async def webscoket_receive(self, message):
@@ -74,9 +74,9 @@ class LoggingAsyncJsonWebsocketConsumer(AsyncJsonWebsocketConsumer):
         The method in ``eventtype`` must be in the set of
         ``allowed_eventtypes`` specified on the consumer.
         """
-        msg_type = content['eventtype']
+        msg_type = content["eventtype"]
         # logger.debug('received json: %s in %s', content, self.__class__.__name__)
         if msg_type in self.allowed_eventtypes:
             method = getattr(self, msg_type)
-            return await method(**content, **kwargs, **getattr(self, 'kwargs', dict()))
+            return await method(**content, **kwargs, **getattr(self, "kwargs", dict()))
         raise ValueError(f'The eventtype "{msg_type}" is not allowed.')

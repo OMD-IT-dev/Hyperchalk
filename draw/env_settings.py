@@ -5,7 +5,9 @@ The settings are explained in https://docs.djangoproject.com/en/3.2/topics/setti
 
 You should also have a look at https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 """
+
 # pylint: disable=wildcard-import,unused-wildcard-import
+# ruff: noqa: F403,F405 # disable wildcard import errors
 from os import environ as env
 
 import dj_database_url
@@ -77,9 +79,9 @@ LINK_BASE = env.get("HC_LINK_BASE")
 # WARNING: do not use sqlite with more than one thread / process!
 
 # NOTE: the environment variable where this gets its config from is called "DATABASE_URL"
-DATA_DIR = BASE_DIR / 'data'
+DATA_DIR = BASE_DIR / "data"
 DATABASES = {
-    'default': dj_database_url.config(default=f'sqlite:///{DATA_DIR / "db.sqlite3"}'),
+    "default": dj_database_url.config(default=f'sqlite:///{DATA_DIR / "db.sqlite3"}'),
 }
 
 # Caching
@@ -93,13 +95,13 @@ DATABASES = {
 DEFAULT_REDIS = "redis://redis:6379"
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
         # 6379 is the default redis port. if you use docker, the hostname is the name of
         # the redis service. if you have a redis cluster, just add all servers to the list,
         # beginning with the leader. the url scheme is: 'redis://username:password@host:port'
         # or 'redis://host:port' if authentication is disabled on your redis.
-        'LOCATION': env.get("HC_REDIS_URL", DEFAULT_REDIS).split(",")
+        "LOCATION": env.get("HC_REDIS_URL", DEFAULT_REDIS).split(","),
     }
 }
 
@@ -133,22 +135,25 @@ CHANNEL_LAYERS = {
 # Logging
 # https://docs.djangoproject.com/en/3.2/topics/logging/
 
-LOGGING = deepmerge(LOGGING, {
-    'handlers': {
-        'draw_logging': {
-            'level': 'WARNING',
-            # 'filters': ['require_debug_true'],
-            'class': 'logging.StreamHandler',
-            'formatter': 'django.server',
-        }
-    },
-    'loggers': {
-        'draw': {
-            'level': 'WARNING',
-            'handlers': ['draw_logging'],
+LOGGING = deepmerge(
+    LOGGING,
+    {
+        "handlers": {
+            "draw_logging": {
+                "level": "WARNING",
+                # 'filters': ['require_debug_true'],
+                "class": "logging.StreamHandler",
+                "formatter": "django.server",
+            }
         },
-    }
-})
+        "loggers": {
+            "draw": {
+                "level": "WARNING",
+                "handlers": ["draw_logging"],
+            },
+        },
+    },
+)
 
 # Email
 # https://docs.djangoproject.com/en/3.2/ref/settings/#email-backend
@@ -160,20 +165,20 @@ LOGGING = deepmerge(LOGGING, {
 if env.get("HC_EMAIL_BACKEND"):
     EMAIL_BACKEND = env.get("HC_EMAIL_BACKEND")
 if env.get("HC_EMAIL_HOST"):
-    EMAIL_BACKEND = env.get("HC_EMAIL_BACKEND", 'django.core.mail.backends.smtp.EmailBackend')
+    EMAIL_BACKEND = env.get("HC_EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
     EMAIL_HOST = env.get("HC_EMAIL_HOST")
     EMAIL_PORT = int(env.get("HC_EMAIL_PORT", "465"))
     EMAIL_HOST_USER = env.get("HC_EMAIL_HOST_USER")
     EMAIL_HOST_PASSWORD = env.get("HC_EMAIL_HOST_PASSWORD")
     EMAIL_USE_TLS = env.get("HC_EMAIL_USE_TLS", "true") == "true"
-    EMAIL_USE_SSL = env.get("HC_EMAIL_USE_SSL", "false") == "true" # mutually exclusive to EMAIL_USE_TLS
+    EMAIL_USE_SSL = env.get("HC_EMAIL_USE_SSL", "false") == "true"  # mutually exclusive to EMAIL_USE_TLS
 if env.get("HC_EMAIL_HOST") or env.get("HC_EMAIL_BACKEND"):
-    EMAIL_SUBJECT_PREFIX = env.get("HC_EMAIL_SUBJECT_PREFIX", '[Hyperchalk]')
+    EMAIL_SUBJECT_PREFIX = env.get("HC_EMAIL_SUBJECT_PREFIX", "[Hyperchalk]")
 
 # Time Zones
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
-TIME_ZONE = env.get("HC_TIME_ZONE", 'CET')
+TIME_ZONE = env.get("HC_TIME_ZONE", "CET")
 
 # Language settings
 # The language code is respected by django, as well as excalidraw

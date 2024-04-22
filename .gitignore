@@ -116,6 +116,9 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# Ruff
+.ruff_cache/
+
 # test files
 db*.sqlite3
 db*.sqlite3*

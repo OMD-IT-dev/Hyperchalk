@@ -1,0 +1,11 @@
+[project]
+name = "Hyperchalk"
+version = "1.2.2"
+maintainers = [
+  { name = "Lukas Menzel", email = "menzel@sd.uni-frankfurt.de" },
+  { name = "Sebastian Gombert", email = "s.gombert@dipf.de" },
+]
+license = { file = "LICENSE" }
+
+[tool.ruff]
+line-length = 120

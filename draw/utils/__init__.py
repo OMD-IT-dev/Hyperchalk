@@ -1,6 +1,7 @@
 """
 Helper functions and classes that don't need any configured state or django stuff loaded.
 """
+
 import base64
 import json
 import logging
@@ -12,8 +13,23 @@ import zlib
 from enum import Enum
 from hashlib import sha256
 from pprint import pformat
-from typing import (Any, Callable, Collection, Dict, Generic, Hashable, Iterable, List, Optional, Protocol, Sequence,
-                    Tuple, TypeVar, Union, cast)
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Generic,
+    Hashable,
+    Iterable,
+    List,
+    Optional,
+    Protocol,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ValidationError
@@ -32,7 +48,9 @@ class SeqMode(Enum):
     COMBINE = 2
     OVERRIDE = 3
 
+
 StructureType = TypeVar("StructureType", dict, list, set, tuple)
+
 
 # def deepmerge(first: StructureType, second: StructureType) -> StructureType:
 def deepmerge(first, second, sequence_mode=SeqMode.MERGE):
@@ -98,7 +116,8 @@ def deepmerge(first, second, sequence_mode=SeqMode.MERGE):
     raise TypeError(f"unsupported type: {type(first)}")
 
 
-ChainedObj = TypeVar('ChainedObj')
+ChainedObj = TypeVar("ChainedObj")
+
 
 class Chain(Generic[ChainedObj]):
     """
@@ -109,14 +128,14 @@ class Chain(Generic[ChainedObj]):
     calling the ``Chain`` instance. If any of the items or attributes in the getter chain
     contains ``None``, the call return value will be ``None``, too.
     """
+
     def __init__(self, obj: ChainedObj) -> None:
         self.obj = obj
 
     def get(self, key: Any, default=None):
         if isinstance(self.obj, dict):
             return Chain(self.obj.get(key, None))
-        if isinstance(self.obj, (list, tuple)) \
-        and 0 <= key < len(self.obj):
+        if isinstance(self.obj, (list, tuple)) and 0 <= key < len(self.obj):
             return Chain(self.obj[key])
         if isinstance(key, str):
             return Chain(getattr(self.obj, key, None))
@@ -150,8 +169,8 @@ def pick(d: dict, keys: Collection[Hashable]):
 
 
 class StrLike(Protocol):
-    def __str__(self) -> str:
-        ...
+    def __str__(self) -> str: ...
+
 
 def apply_middleware(*args: Union[Callable, str]):
     """
@@ -168,10 +187,8 @@ def apply_middleware(*args: Union[Callable, str]):
         ret = middelware(ret)
     return ret
 
-def reverse_with_query(
-    viewname: str, kwargs: Dict[str, Any] = None,
-    query_kwargs: Dict[str, Any] =None
-):
+
+def reverse_with_query(viewname: str, kwargs: Dict[str, Any] = None, query_kwargs: Dict[str, Any] = None):
     """
     Custom reverse to add a query string after the url
     Example usage::
@@ -188,51 +205,64 @@ def reverse_with_query(
 
     return url
 
+
 async_get_object_or_404 = sync_to_async(get_object_or_404)
 
 JSONType = Optional[Union[dict, list, str, int, float]]
 
+
 def load_content(content: Union[bytes, bytearray, memoryview], compressed: bool = True) -> JSONType:
     content = bytes(content)
     if compressed:
-        return json.loads(zlib.decompress(content).decode('utf-8'))
-    return json.loads(content.decode('utf-8'))
+        return json.loads(zlib.decompress(content).decode("utf-8"))
+    return json.loads(content.decode("utf-8"))
+
 
 def dump_content(content: JSONType, force_compression=False) -> Tuple[bytes, bool]:
-    val_bytes = json.dumps(content, ensure_ascii=False).encode('utf-8')
+    val_bytes = json.dumps(content, ensure_ascii=False).encode("utf-8")
     compressed = zlib.compress(val_bytes)
     if force_compression or len(compressed) < len(val_bytes):
         return compressed, True
     return val_bytes, False
 
+
 class HasCompressionInformation(Protocol):
     compressed_size: int
     uncompressed_size: int
+
 
 def compression_ratio(obj: HasCompressionInformation):
     comp = 100 - obj.compressed_size / obj.uncompressed_size * 100
     return f"{comp:.2f} %"
 
-def uncompressed_json_size(uncompressed_content: JSONType):
-    return len(json.dumps(uncompressed_content, ensure_ascii=False).encode('utf-8'))
 
-def flatten_list(l: list):
+def uncompressed_json_size(uncompressed_content: JSONType):
+    return len(json.dumps(uncompressed_content, ensure_ascii=False).encode("utf-8"))
+
+
+def flatten_list(l: list):  # noqa: E741
     return [flatten_list(e) if isinstance(e, list) else e for e in l]
 
+
 def user_id_for_room(uid: uuid.UUID, room_name: str):
-    return sha256(uid.bytes + b":" + room_name.encode('utf-8')).hexdigest()
+    return sha256(uid.bytes + b":" + room_name.encode("utf-8")).hexdigest()
+
 
 def make_room_name(length):
     return "".join(random.choices(string.ascii_letters + string.digits, k=length))
 
-room_name_re = re.compile(r'[a-zA-Z0-9_-]{10,24}')
+
+room_name_re = re.compile(r"[a-zA-Z0-9_-]{10,24}")
+
 
 def validate_room_name(room_name: str):
     if not room_name_re.fullmatch(room_name):
         raise ValidationError(_("'%s' is not a valid room name.") % (room_name,))
 
+
 def absolute_reverse(request: HttpRequest, *args, **kwargs):
     return request.build_absolute_uri(reverse(*args, **kwargs))
+
 
 lazy_pformat = lazy(pformat, str)
 
@@ -247,6 +277,7 @@ class TrustedOrigins(Iterable[str]):
     model will be loaded precisely at this point. The allowed hosts are then the hostnames of the
     issuer field of the :model:`lti1p3_tool_config.LtiTool` configs (speak the LTI platforms).
     """
+
     def __init__(self) -> None:
         self.tool_model: Any = None
         self.is_connected = False
@@ -257,7 +288,7 @@ class TrustedOrigins(Iterable[str]):
         self.tool_model = tool_model
 
     def update_issuers(self, additional_issuers: Iterable[str]):
-        issuers = self.tool_model.objects.all().values_list('issuer')
+        issuers = self.tool_model.objects.all().values_list("issuer")
         self.issuers = list(additional_issuers) + [issuer for (issuer,) in issuers]
 
     def __iter__(self):
@@ -265,18 +296,18 @@ class TrustedOrigins(Iterable[str]):
         # if not self.is_connected:
         #     yield from []
         # else:
-            # if not self.tool_model:
-            #     lti_path = 'pylti1p3.contrib.django.lti1p3_tool_config.models.LtiTool'
-            #     self.tool_model = import_string(lti_path)
-            # FIXME: in the async ninja context, this does not work until StopIteration is raised.
-            #        only one iteration per request seems to be called
-            #        what to do if this is called from an async context? It does not work until then!
-            # see #36
+        # if not self.tool_model:
+        #     lti_path = 'pylti1p3.contrib.django.lti1p3_tool_config.models.LtiTool'
+        #     self.tool_model = import_string(lti_path)
+        # FIXME: in the async ninja context, this does not work until StopIteration is raised.
+        #        only one iteration per request seems to be called
+        #        what to do if this is called from an async context? It does not work until then!
+        # see #36
 
-            # for (issuer,) in self.tool_model.objects.all().values_list('issuer'):
-            #     print(f'csrf check issuer: {issuer}/')
-            #     # yield urlparse(issuer).hostname
-            #     yield issuer
+        # for (issuer,) in self.tool_model.objects.all().values_list('issuer'):
+        #     print(f'csrf check issuer: {issuer}/')
+        #     # yield urlparse(issuer).hostname
+        #     yield issuer
 
 
 class WebSocketFormatter(log.ServerFormatter):
@@ -290,11 +321,12 @@ class WebSocketFormatter(log.ServerFormatter):
         elif lvl >= logging.WARNING:
             msg = self.style.WARNING(msg)
 
-        if self.uses_server_time() and not hasattr(record, 'server_time'):
-            setattr(record, 'server_time', self.formatTime(record, self.datefmt))
+        if self.uses_server_time() and not hasattr(record, "server_time"):
+            setattr(record, "server_time", self.formatTime(record, self.datefmt))
 
         record.msg = msg
         return super().format(record)
+
 
 def bytes_to_data_uri(content: bytes, mime: str):
     return f"data:{mime};base64,{base64.b64encode(content).decode('ascii')}"

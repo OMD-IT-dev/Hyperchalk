@@ -5,7 +5,7 @@ from ninja import Schema
 
 class ExcalidrawBinaryFile(Schema):
     id: str
-    created: int # unix time stamp
+    created: int  # unix time stamp
     dataURL: str
     mimeType: str
     filePath: Optional[str]

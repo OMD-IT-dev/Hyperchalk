@@ -9,17 +9,23 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
 from django.utils.translation import gettext_lazy as _
 
-from draw.utils.auth import (Unauthenticated, Unauthorized, create_html_response_forbidden,
-                             create_json_response_forbidden, user_is_authenticated,
-                             user_is_authorized)
+from draw.utils.auth import (
+    Unauthenticated,
+    Unauthorized,
+    create_html_response_forbidden,
+    create_json_response_forbidden,
+    user_is_authenticated,
+    user_is_authorized,
+)
 
 from . import models as m
 
-logger = logging.getLogger('draw.collab')
+logger = logging.getLogger("draw.collab")
 
 get_or_create_room = sync_to_async(m.ExcalidrawRoom.objects.get_or_create)
 
 room_name = sync_to_async(lambda r: r.room_name)
+
 
 async def room_access_check(request: HttpRequest, room_obj: m.ExcalidrawRoom):
     """
@@ -35,19 +41,19 @@ async def room_access_check(request: HttpRequest, room_obj: m.ExcalidrawRoom):
         pass
     elif not settings.ALLOW_ANONYMOUS_VISITS:
         authenticated, authorized = await asyncio.gather(
-            user_is_authenticated(request.user),
-            user_is_authorized(request.user, room_obj, request.session))
+            user_is_authenticated(request.user), user_is_authorized(request.user, room_obj, request.session)
+        )
         if not authenticated:
-            logger.warning(
-                "Someone tried to access %s without being authenticated.",
-                room_obj.room_name)
+            logger.warning("Someone tried to access %s without being authenticated.", room_obj.room_name)
             raise Unauthenticated(_("You need to be logged in."))
         if not authorized:
             logger.warning(
                 "User %s tried to access %s but is not allowed to access it.",
-                await sync_to_async(lambda: request.user.username)(), # type: ignore
-                room_obj.room_name)
+                await sync_to_async(lambda: request.user.username)(),  # type: ignore
+                room_obj.room_name,
+            )
             raise Unauthorized(_("You are not allowed to access this room."))
+
 
 def require_room_access(json=False):
     """
@@ -70,12 +76,15 @@ def require_room_access(json=False):
                 return await async_func(request, *args, room_name=room_name, **kwargs)
             except PermissionDenied as e:
                 return create_response(e)
+
         return inner
+
     return decorator
+
 
 @sync_to_async
 def get_room_record_ids(room_name: str):
-    return [rec_id for (rec_id,) in m.ExcalidrawLogRecord.objects\
-        .filter(room_name=room_name)\
-        .order_by('id')\
-        .values_list('id')]
+    return [
+        rec_id
+        for (rec_id,) in m.ExcalidrawLogRecord.objects.filter(room_name=room_name).order_by("id").values_list("id")
+    ]

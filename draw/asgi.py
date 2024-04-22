@@ -16,17 +16,19 @@ from django.conf import settings
 from .urlconf import ws_include
 from .utils import apply_middleware
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'draw.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "draw.settings")
 
 http_application = get_asgi_application()
 
 # def apply_middleware_from_settings()
 
-application = ProtocolTypeRouter({
-    "http": http_application,
-    "websocket": apply_middleware(
-        *settings.WS_MIDDLEWARE,
-        URLRouter([ path('ws/', ws_include('draw.urls_ws')) ]),
-    ),
-    # "websocket": AllowedHostsOriginValidator(AuthMiddlewareStack(URLRouter())),
-})
+application = ProtocolTypeRouter(
+    {
+        "http": http_application,
+        "websocket": apply_middleware(
+            *settings.WS_MIDDLEWARE,
+            URLRouter([path("ws/", ws_include("draw.urls_ws"))]),
+        ),
+        # "websocket": AllowedHostsOriginValidator(AuthMiddlewareStack(URLRouter())),
+    }
+)

@@ -12,13 +12,13 @@ admin.site.register(CustomUser, UserAdmin)
 
 @admin.register(m.OneOffRegistrationLink)
 class OneOffRegistrationLinkAdmin(admin.ModelAdmin):
-    list_display = ['consumer_name', 'id']
-    readonly_fields = ['registration_link']
+    list_display = ["consumer_name", "id"]
+    readonly_fields = ["registration_link"]
 
     # pylint: disable=signature-differs,attribute-defined-outside-init
 
     def get_readonly_fields(self, request: HttpRequest, obj: m.OneOffRegistrationLink):
-        if not chain(obj, ('pk',)):
+        if not chain(obj, ("pk",)):
             return []
         return super().get_readonly_fields(request, obj)
 

@@ -7,15 +7,16 @@ from draw.utils import TrustedOrigins
 
 
 class LtiapiConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'ltiapi'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "ltiapi"
 
     def ready(self) -> None:
         if isinstance(settings.CSRF_TRUSTED_ORIGINS, TrustedOrigins):
+
             def request_start_handler(sender, **kwargs):
-                Tool = import_string('pylti1p3.contrib.django.lti1p3_tool_config.models.LtiTool')
+                Tool = import_string("pylti1p3.contrib.django.lti1p3_tool_config.models.LtiTool")
                 settings.CSRF_TRUSTED_ORIGINS.connected(Tool)
-                settings.CSRF_TRUSTED_ORIGINS\
-                    .update_issuers(additional_issuers=[f'https://{settings.LINK_BASE}'])
+                settings.CSRF_TRUSTED_ORIGINS.update_issuers(additional_issuers=[f"https://{settings.LINK_BASE}"])
+
             request_started.connect(request_start_handler)
         return super().ready()

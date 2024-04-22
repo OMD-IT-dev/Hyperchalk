@@ -1,4 +1,6 @@
 # pylint: disable=wildcard-import,unused-wildcard-import
+# ruff: noqa: F403,F405 # disable wildcard import errors
+
 try:
     from local_settings import *
 
@@ -10,14 +12,14 @@ except ModuleNotFoundError:
     from draw.settings import *
 
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         },
-        **json.loads(os.environ.get('DJANGO_DATABASES', '{}'))
+        **json.loads(os.environ.get("DJANGO_DATABASES", "{}")),
     }
     SECRET_KEY = "super_secret_key_that_has_to_be_changed_in_production!!!"
     TIME_ZONE = "UTC"
-    LINK_BASE = 'localhost:8000'
+    LINK_BASE = "localhost:8000"
 
     finalize_settings(locals())
