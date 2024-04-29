@@ -1,5 +1,5 @@
 import { ExcalidrawImperativeAPI, LibraryItems } from "@excalidraw/excalidraw/types/types"
-import { RefObject, useCallback } from "react"
+import { useCallback } from "react"
 
 import { getLocalStorageJson, setLocalStorageJson } from "../utils"
 
@@ -17,17 +17,24 @@ export function loadLibrary(): LibraryItems {
 /**
  * A react hook which loads libraries from urls supplied via localStorage.
  *
- * @param apiRef api ref to the excalidraw api
+ * @param api api ref to the excalidraw api
  * @returns hook for loading libraries
  */
-export function useLoadLibraries(apiRef: RefObject<ExcalidrawImperativeAPI>) {
-  return useCallback(() => {
+export function useLoadLibraries(api: ExcalidrawImperativeAPI | undefined) {
+  return useCallback(async () => {
     let urls: string[] = getLocalStorageJson(_addLibraries, [])
-    if (apiRef.current) {
-      for (let url of urls) {
-        apiRef.current.importLibrary(url)
+    if (api) {
+      // download all libraries
+      const responses = await Promise.all(urls.map((url) => fetch(url)))
+      const libraryItemsList = await Promise.all(
+        responses.filter((response) => response.ok).map((response) => response.json() as Promise<LibraryItems>)
+      )
+
+      // prompt the user for each library
+      for (let libraryItems of libraryItemsList) {
+        api.updateLibrary({ libraryItems, merge: true })
       }
       setLocalStorageJson(_addLibraries, [])
     }
-  }, [apiRef])
+  }, [api])
 }

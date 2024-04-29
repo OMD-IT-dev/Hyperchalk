@@ -4,7 +4,9 @@
     {
       "type": "npm",
       "script": "typecheck",
-      "problemMatcher": ["$tsc"],
+      "problemMatcher": [
+        "$tsc"
+      ],
       "label": "npm: typecheck",
       "detail": "tsc --noEmit --skipLibCheck"
     }

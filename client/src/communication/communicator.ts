@@ -1,11 +1,6 @@
 import { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types"
-import {
-  AppState,
-  BinaryFiles,
-  Collaborator,
-  ExcalidrawImperativeAPI,
-} from "@excalidraw/excalidraw/types/types"
-import { RefObject, useState, useRef, useEffect } from "react"
+import { AppState, BinaryFiles, Collaborator, ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types/types"
+import { useState, useEffect } from "react"
 import ReconnectingWebSocket from "reconnectingwebsocket"
 
 import { BroadcastedExcalidrawElement, ConfigProps, PointerUpdateProps } from "../types"
@@ -47,17 +42,16 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
   protected ws: ReconnectingWebSocket
   protected config: ConfigProps
 
-  protected _excalidrawApiRef?: RefObject<ExcalidrawImperativeAPI>
+  protected _excalidrawApi?: ExcalidrawImperativeAPI
   private _connectionState: ConnectionStates = "CONNECTED"
+
+  // buffer for messages that were sent before the excalidraw api was set up
+  protected _messageBuffer: CommunicatorMessage[] = []
 
   // #region methods for excalidraw props
 
   broadcastCursorMovement: (collaborator: PointerUpdateProps) => void = noop
-  broadcastElements: (
-    elements: readonly ExcalidrawElement[],
-    appState: AppState,
-    files: BinaryFiles
-  ) => void = noop
+  broadcastElements: (elements: readonly ExcalidrawElement[], appState: AppState, files: BinaryFiles) => void = noop
   saveRoom: () => void = noop
 
   // #endregion methods for excalidraw props
@@ -75,7 +69,9 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
     this.ws = ws
 
     this.ws.addEventListener("message", (event) => {
-      this.routeMessage(JSON.parse(event.data))
+      const parsedData = JSON.parse(event.data)
+      if (this._excalidrawApi) this.routeMessage(parsedData)
+      else this._messageBuffer.push(parsedData) // buffer messages until the excalidraw api is set up
     })
 
     // code 3000 is sent when a disconnect happens due to an authentication error.
@@ -88,18 +84,23 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
   /**
    * This needs to be called when the excalidraw component is set up!
    */
-  set excalidrawApiRef(apiRef: RefObject<ExcalidrawImperativeAPI>) {
-    this._excalidrawApiRef = apiRef
+  set excalidrawApi(api: ExcalidrawImperativeAPI | undefined) {
+    this._excalidrawApi = api
+    if (api) {
+      // flush the message buffer
+      for (let i = 0; i < this._messageBuffer.length; i++) this.routeMessage(this._messageBuffer[i])
+      this._messageBuffer = []
+    }
   }
 
   /**
    * Helper to access the excalidraw api more easily
    */
-  protected get excalidrawApi() {
-    if (!this._excalidrawApiRef) {
+  get excalidrawApi(): ExcalidrawImperativeAPI {
+    if (!this._excalidrawApi) {
       throw new Error("The excalidrawApiRef has not been set yet.")
     }
-    return this._excalidrawApiRef.current
+    return this._excalidrawApi
   }
 
   get connectionState() {
@@ -151,16 +152,14 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
    *
    * @param message message sent by a collaborator
    *
-   * @returns is the message was routed
+   * @returns if the message was routed
    */
   protected routeMessage<MsgType extends CommunicatorMessage>(message: MsgType): boolean {
     switch (message.eventtype) {
       case "collaborator_change":
         // if a buffer was sent, only the last change and any
         // additional information is relevant to this client
-        this.receiveCollaboratorChange(
-          message.changes.reduce((acc, current) => Object.assign(acc, current), {})
-        )
+        this.receiveCollaboratorChange(message.changes.reduce((acc, current) => Object.assign(acc, current), {}))
         return true
       case "elements_changed":
       case "full_sync":
@@ -210,12 +209,12 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
   protected receiveElements(remoteElements: readonly BroadcastedExcalidrawElement[]) {
     if (this.excalidrawApi) {
       let reconciledElements = reconcileElements(
-        this.excalidrawApi?.getSceneElementsIncludingDeleted(),
+        this.excalidrawApi.getSceneElementsIncludingDeleted(),
         remoteElements,
-        this.excalidrawApi?.getAppState()
+        this.excalidrawApi.getAppState()
       )
       this.updateBroadcastedElementsVersions(reconciledElements)
-      this.excalidrawApi?.updateScene({ elements: reconciledElements, commitToHistory: false })
+      this.excalidrawApi.updateScene({ elements: reconciledElements, commitToHistory: false })
     }
   }
   // #endregion element changes
@@ -230,16 +229,22 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
    * @returns information about the collaborator for internal usage
    */
   protected receiveCollaboratorChange(change: CollaboratorChange) {
+    // as of 0.17, the excalidraw api expects a new map of collaborators. otherwise, the cursors will not update.
+    const collaborators = new Map(this.collaborators)
+
     let userRoomId = change.userRoomId!
-    let isKnownCollaborator = this.collaborators.has(userRoomId)
-    let collaborator = this.collaborators.get(userRoomId) ?? {}
+    let collaborator = collaborators.get(userRoomId)
+    let isKnownCollaborator = !!collaborator
+    collaborator ??= {}
+    if (!isKnownCollaborator) collaborators.set(userRoomId, collaborator) // reduce the amount of calls to Map
+
+    collaborator.id = userRoomId
     delete change.userRoomId
     delete change.time
     Object.assign(collaborator, change)
-    this.collaborators.set(userRoomId, collaborator)
 
-    this.excalidrawApi?.updateScene({ collaborators: this.collaborators })
-
+    this.excalidrawApi.updateScene({ collaborators })
+    this.collaborators = collaborators
     return { isKnownCollaborator }
   }
   // #endregion collaborator awareness
@@ -254,9 +259,7 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
  * @returns the current connection state
  */
 export function useConnectionState(communicator: Communicator) {
-  const [connectionState, setConnectionState] = useState<ConnectionStates>(
-    communicator.connectionState
-  )
+  const [connectionState, setConnectionState] = useState<ConnectionStates>(communicator.connectionState)
 
   useEventEmitter(communicator, "connectionStateChanged", ({ state }) => {
     setConnectionState(state)
@@ -270,12 +273,12 @@ export function useConnectionState(communicator: Communicator) {
  * @param communicator the communicator to supply a ref to
  * @returns the ref to be used by excalidraw
  */
-export function useCommunicatorExcalidrawRef(communicator: Communicator) {
-  const ref = useRef<ExcalidrawImperativeAPI>(null)
+export function useExcalidrawApiWithCommunicator(communicator: Communicator) {
+  const [excalidrawApi, setExcalidrawApi] = useState<ExcalidrawImperativeAPI | undefined>()
   useEffect(() => {
-    communicator.excalidrawApiRef = ref
-  }, [communicator])
-  return ref
+    communicator.excalidrawApi = excalidrawApi
+  }, [excalidrawApi])
+  return [excalidrawApi, setExcalidrawApi] as const
 }
 
 // #endregion hooks

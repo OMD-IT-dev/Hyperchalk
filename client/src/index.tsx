@@ -1,18 +1,18 @@
 // import { useState, useEffect } from "react";
 import React, { useCallback, useEffect } from "react"
-import { render } from "react-dom"
-import Excalidraw from "@excalidraw/excalidraw"
+import { createRoot } from "react-dom/client"
+import { Excalidraw } from "@excalidraw/excalidraw"
 
 import { ConfigProps } from "./types"
 import { getJsonScript, noop } from "./utils"
 import { CollaborationCommunicator, ReplayCommunicator } from "./communication"
 import { useEventListener } from "./hooks/useEventListener"
-import { getInitialData, getInitialReplayData, useSaveState } from "./persistance/initial"
+import { getInitialData, getInitialReplayData, useSaveState } from "./persistence/initial"
 import ReconnectingWebSocket from "reconnectingwebsocket"
-import { saveLibrary, useLoadLibraries } from "./persistance/library"
+import { saveLibrary, useLoadLibraries } from "./persistence/library"
 
 import "./style.css"
-import { useCommunicatorExcalidrawRef, useConnectionState } from "./communication/communicator"
+import { useExcalidrawApiWithCommunicator, useConnectionState } from "./communication/communicator"
 import ReplayControls from "./components/ReplayControls"
 import TopRightUI from "./components/TopRightUI"
 import { dispatchLtiFrameMessage } from "./lti"
@@ -70,20 +70,25 @@ let communicator = config.IS_REPLAY_MODE
 type WindowEK = EventKey<WindowEventMap>
 type DocEK = EventKey<DocumentEventMap>
 
+/**
+ * @returns The main component of the application
+ */
 function IndexPage() {
-  let draw = useCommunicatorExcalidrawRef(communicator)
+  let [excalidrawAPI, setExcalidrawAPI] = useExcalidrawApiWithCommunicator(communicator)
   let connectionState = useConnectionState(communicator)
   useEffect(() => {
-    window.draw = draw
-  }, [draw])
+    window.draw = excalidrawAPI ?? undefined
+  }, [excalidrawAPI])
 
-  const saveStateToLocalStorage = config.IS_REPLAY_MODE ? useCallback(noop, []) : useSaveState(draw, config.ROOM_NAME)
+  const saveStateToLocalStorage = config.IS_REPLAY_MODE
+    ? useCallback(noop, [])
+    : useSaveState(excalidrawAPI, config.ROOM_NAME)
 
   const saveToServerImmediately = config.IS_REPLAY_MODE
     ? useCallback(noop, [])
     : useCallback(() => (communicator as CollaborationCommunicator).saveRoomImmediately(), [communicator])
 
-  const loadEnqueuedLibraries = useLoadLibraries(draw)
+  const loadEnqueuedLibraries = useLoadLibraries(excalidrawAPI)
 
   useEventListener<WindowEventMap, WindowEK>(window, "focus", loadEnqueuedLibraries)
   useEventListener<WindowEventMap, WindowEK>(window, "blur", saveStateToLocalStorage)
@@ -95,7 +100,7 @@ function IndexPage() {
   return connectionState == "CONNECTED" ? (
     <div className="excalidraw">
       <Excalidraw
-        ref={draw}
+        excalidrawAPI={setExcalidrawAPI}
         initialData={initialData}
         onPointerUpdate={communicator.broadcastCursorMovement}
         onChange={communicator.broadcastElements}
@@ -120,4 +125,9 @@ function IndexPage() {
   )
 }
 
-render(<IndexPage />, document.getElementById("app"))
+// render the main element
+let rootElem
+if ((rootElem = document.getElementById("app"))) {
+  const root = createRoot(rootElem)
+  root.render(<IndexPage />)
+}

@@ -3,11 +3,7 @@ import ReconnectingWebSocket from "reconnectingwebsocket"
 
 import { ConfigProps } from "../types"
 import { useEventEmitter } from "../hooks/useEventEmitter"
-import Communicator, {
-  CollaboratorChange,
-  CommunicatorEventMap,
-  CommunicatorMessage,
-} from "./communicator"
+import Communicator, { CollaboratorChange, CommunicatorEventMap, CommunicatorMessage } from "./communicator"
 
 // #region message types
 interface ResetScene {
@@ -110,9 +106,7 @@ export default class ReplayCommunicator extends Communicator<ReplayCommunicatorE
  * @param communicator an instance of ReplayCommunicator that will send control requests
  * @returns custom hook
  */
-export function useControlState(
-  communicator: ReplayCommunicator
-): [ControlStates, (newState: ControlTypes) => void] {
+export function useControlState(communicator: ReplayCommunicator): [ControlStates, (newState: ControlTypes) => void] {
   const [controlState, setControlState] = useState<ControlStates>(communicator.controlState)
   useEventEmitter(communicator, "controlStateChanged", (event) => {
     setControlState(event.state)

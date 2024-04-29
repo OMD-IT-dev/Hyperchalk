@@ -1,11 +1,6 @@
 import { isInvisiblySmallElement } from "@excalidraw/excalidraw"
 import { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types"
-import {
-  AppState,
-  BinaryFileData,
-  BinaryFiles,
-  Collaborator,
-} from "@excalidraw/excalidraw/types/types"
+import { AppState, BinaryFileData, BinaryFiles, Collaborator } from "@excalidraw/excalidraw/types/types"
 import debounce from "lodash/debounce"
 import throttle from "lodash/throttle"
 import ReconnectingWebSocket from "reconnectingwebsocket"
@@ -226,7 +221,7 @@ export default class CollaborationCommunicator extends Communicator {
       .filter((r) => r.status == 200)
       .map((r) => r.json() as Promise<BinaryFileData>)
     const downloadedFiles = await Promise.all(succeededBinaryFileData)
-    this.excalidrawApi?.addFiles(downloadedFiles)
+    this.excalidrawApi.addFiles(downloadedFiles)
 
     // retry downloading failed IDs after a timeout elapsed
     const downloadedFileIds = downloadedFiles.map((f) => f.id as string)
@@ -253,7 +248,7 @@ export default class CollaborationCommunicator extends Communicator {
     this.startUploadingFileIDs(fileIds)
 
     // make new PUT requests for all new and wait till they are settled.
-    const files = this.excalidrawApi?.getFiles() ?? {}
+    const files = this.excalidrawApi.getFiles() ?? {}
     const fileRequests = Object.entries(files)
       .filter(([id, file]) => fileIds.includes(id))
       .map(([id, file]) => fetch(this.fileUrl(id), apiRequestInit("PUT", file)))
@@ -305,9 +300,7 @@ export default class CollaborationCommunicator extends Communicator {
    * @returns [[IDs of files that are not synced yet], [IDs of files that are too large to sync]]
    */
   private filesToSync(files: BinaryFiles): [string[], string[]] {
-    const tooLarge = Object.keys(files).filter(
-      (id) => files[id].dataURL.length > this.config.MAX_FILE_SIZE_B64
-    )
+    const tooLarge = Object.keys(files).filter((id) => files[id].dataURL.length > this.config.MAX_FILE_SIZE_B64)
     const toSync = Object.keys(files).filter(
       (id) =>
         !this.uploadedFileIds.has(id) &&
@@ -360,15 +353,13 @@ export default class CollaborationCommunicator extends Communicator {
     //        unhandled promise to the terminal. everything will still work file though.
     //        So this is not a problem of high priority.
     if (tooLarge.length) {
-      let newElements = elements.filter(
-        (e) => e.type != "image" || e.fileId == null || !tooLarge.includes(e.fileId)
-      )
+      let newElements = elements.filter((e) => e.type != "image" || e.fileId == null || !tooLarge.includes(e.fileId))
       for (let fileId in files) {
         if (tooLarge.includes(fileId)) delete files[fileId]
       }
       const msg: Record<string, string> = getJsonScript("custom-messages")
-      this.excalidrawApi?.setToastMessage(msg["FILE_TOO_LARGE"])
-      this.excalidrawApi?.updateScene({ elements: newElements })
+      this.excalidrawApi.setToast({ message: msg["FILE_TOO_LARGE"] })
+      this.excalidrawApi.updateScene({ elements: newElements })
       return
     }
 
@@ -395,12 +386,6 @@ export default class CollaborationCommunicator extends Communicator {
       if (filesToSync.length) {
         this.sendFiles(filesToSync)
       }
-
-      // FIXME: why is the cursor position not send if elements are being dragged? see issue #2
-      // https://gitlab.tba-hosting.de/lpa-aflek-alice/excalidraw-lti-application/-/issues/2
-      // if (appState.cursorButton == "down") {
-      //   this._broadcastCursorMovement({  })
-      // }
     } else {
       // full resync after websocket failed once
       this.scheduleFullSync()
@@ -444,16 +429,16 @@ export default class CollaborationCommunicator extends Communicator {
    */
   private _broadcastCursorMovement({ pointer, button, pointersMap }: PointerUpdateProps) {
     // don't send touch gestures
-    if (pointersMap?.size ?? 0 > 1) return
+    if ((pointersMap?.size ?? 0) > 1) return
 
-    for (let key in pointer) {
-      pointer[key as keyof typeof pointer] |= 0
-    }
+    // force integers
+    pointer["x"] |= 0
+    pointer["y"] |= 0
 
     this.broadcastCollaboratorChange({
       button,
       pointer,
-      selectedElementIds: this.excalidrawApi?.getAppState().selectedElementIds,
+      selectedElementIds: this.excalidrawApi.getAppState().selectedElementIds,
     })
   }
 
@@ -463,9 +448,7 @@ export default class CollaborationCommunicator extends Communicator {
    * @param change change that happened to a collaborator
    * @returns information about the collaborator for internal usage
    */
-  protected receiveCollaboratorChange(change: CollaboratorChange): {
-    isKnownCollaborator: boolean
-  } {
+  protected receiveCollaboratorChange(change: CollaboratorChange) {
     let { isKnownCollaborator } = super.receiveCollaboratorChange(change)
     if (!isKnownCollaborator) {
       this.broadcastEverything()
@@ -498,7 +481,7 @@ export default class CollaborationCommunicator extends Communicator {
    */
   private receiveCollaboratorLeft({ userRoomId }: CollaboratorChange) {
     this.collaborators.delete(userRoomId!)
-    this.excalidrawApi?.updateScene({ collaborators: this.collaborators })
+    this.excalidrawApi.updateScene({ collaborators: this.collaborators })
   }
   // #region collaborator awareness
 
@@ -508,7 +491,7 @@ export default class CollaborationCommunicator extends Communicator {
     this.ws.send(
       JSON.stringify({
         eventtype: "save_room",
-        elements: this.excalidrawApi?.getSceneElementsIncludingDeleted() ?? [],
+        elements: this.excalidrawApi.getSceneElementsIncludingDeleted() ?? [],
       })
     )
   }

@@ -1,5 +1,5 @@
 import { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types"
-import { AppState, Gesture } from "@excalidraw/excalidraw/types/types"
+import { AppState, Gesture, CollaboratorPointer } from "@excalidraw/excalidraw/types/types"
 
 export type BroadcastedExcalidrawElement = ExcalidrawElement & {
   parent?: string
@@ -7,13 +7,8 @@ export type BroadcastedExcalidrawElement = ExcalidrawElement & {
 
 export type ReconciliationAppState = Pick<AppState, "editingElement" | "resizingElement" | "draggingElement">
 
-export interface Pointer {
-  x: number
-  y: number
-}
-
 export interface PointerUpdateProps {
-  pointer: Pointer
+  pointer: CollaboratorPointer
   button: "down" | "up"
   pointersMap?: Gesture["pointers"]
 }

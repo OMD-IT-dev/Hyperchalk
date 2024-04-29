@@ -53,15 +53,16 @@ export function getInitialReplayData(): ImportedDataState {
  * @param roomName room name to save a state for
  * @returns hook
  */
-export function useSaveState(apiRef: RefObject<ExcalidrawImperativeAPI>, roomName: string) {
+export function useSaveState(api: ExcalidrawImperativeAPI | undefined, roomName: string) {
   return useCallback(() => {
-    // if an element is deleted and the user closes the tab before it can sync to the
-    // server, the deleted element will be restored on reload, because we do not save
-    // deleted elements. is this a problem? how correct do we have to be here?
-    const elements = apiRef.current?.getSceneElements() ?? []
-    const appState: Partial<AppState> = { ...apiRef.current?.getAppState() }
-    const files = apiRef.current?.getFiles() ?? {}
+    // if an element is deleted and the user closes the tab before it can sync
+    // to the server, the deleted element will be restored on reload, because we do not
+    // save deleted elements. is this a problem? how correct do we have to be here?
+    // FIXME: future Lukas: yes, this is a problem. We should save deleted elements.
+    const elements = api?.getSceneElements() ?? []
+    const appState: Partial<AppState> = { ...api?.getAppState() }
+    const files = api?.getFiles() ?? {}
     delete appState.collaborators
     localStorage.setItem(roomName, serializeAsJSON(elements, appState, files, "local"))
-  }, [apiRef])
+  }, [api])
 }
