@@ -88,13 +88,19 @@ services:
       - redis
 
   maria:
-    image: mariadb:latest
-    # environment:
-    #   - MARIADB_DATABASE=hyperchalk
-    #   - MARIADB_USER=hyperchalk
-    #   - MARIADB_PASSWORD=CHANGE_THIS_PASSWORD
+    image: mariadb:10.4
+    environment:
+       - MARIADB_DATABASE=hyperchalk
+       - MARIADB_USER=hyperchalk
+       - MARIADB_PASSWORD=CHANGE_THIS_PASSWORD
+       - MARIADB_ROOT_PASSWORD=CHANGE_THIS_PASSWORD
+       - MARIADB_EXTRA_FLAGS=--pressure=OFF 
     volumes:
       - './mariadb:/var/lib/mysql'
+    cap_add:
+      - SYS_RESOURCE
+    tmpfs:
+      - /sys/fs/cgroup:ro
 
   redis:
     image: redis:alpine
